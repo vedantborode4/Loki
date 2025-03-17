@@ -36,6 +36,25 @@ const LokiVoiceAssistant = () => {
     recognitionRef.current = recognition;
   }, []);
 
+  // Preload the video when the component mounts
+  useEffect(() => {
+    // Create a preloaded video element
+    const preloadVideo = document.createElement('video');
+    preloadVideo.src = "/videos/lok1.mp4";
+    preloadVideo.muted = true;
+    preloadVideo.preload = "auto";
+    
+    // Force preloading by playing and immediately pausing
+    preloadVideo.play().then(() => {
+      preloadVideo.pause();
+      preloadVideo.currentTime = 0;
+    }).catch(err => console.error("Preload error:", err));
+    
+    return () => {
+      preloadVideo.src = "";
+    };
+  }, []);
+
   const handleVoiceInput = () => {
     recognitionRef.current && recognitionRef.current.start();
   };
@@ -49,8 +68,23 @@ const LokiVoiceAssistant = () => {
     utterance.onstart = () => {
       setIsSpeaking(true);
       if (videoRef.current) {
+        // Ensure the video is ready to play
         videoRef.current.currentTime = 0;
-        videoRef.current.play().catch(err => console.error("Video play error:", err));
+        
+        const playPromise = videoRef.current.play();
+        
+        if (playPromise !== undefined) {
+          playPromise.then(() => {
+            console.log("Video playback started successfully");
+          }).catch(err => {
+            console.error("Video play error:", err);
+            // Try a second time with user interaction
+            document.addEventListener('click', function playVideoOnce() {
+              videoRef.current.play().catch(e => console.error("Second attempt failed:", e));
+              document.removeEventListener('click', playVideoOnce);
+            }, { once: true });
+          });
+        }
       }
     };
     
@@ -58,6 +92,8 @@ const LokiVoiceAssistant = () => {
       setIsSpeaking(false);
       if (videoRef.current) {
         videoRef.current.pause();
+        // Reset to first frame
+        videoRef.current.currentTime = 0;
       }
     };
     
@@ -65,6 +101,7 @@ const LokiVoiceAssistant = () => {
       setIsSpeaking(false);
       if (videoRef.current) {
         videoRef.current.pause();
+        videoRef.current.currentTime = 0;
       }
     };
     
@@ -96,26 +133,40 @@ const LokiVoiceAssistant = () => {
         .animate-background-glow {
           animation: glow 3s ease-in-out infinite;
         }
+        
+        .video-container {
+          overflow: hidden;
+          border-radius: 50%;
+          width: 72px;
+          height: 72px;
+          border: 2px solid #A3FF12;
+          box-shadow: 0 0 20px #A3FF12;
+          transition: all 0.3s ease;
+        }
       `}</style>
 
       <h1 className="text-4xl font-bold text-center mb-6">Loki Voice Assistant</h1>
 
       <div className="flex justify-center mb-6">
-        {isSpeaking ? (
-          <video 
-            ref={videoRef}
-            className="w-48 h-48 rounded-full object-cover border-2 border-[#A3FF12] shadow-lg"
-            src="/videos/lok1.mp4"
-            muted={false}
-            loop
-          />
-        ) : (
-          <img
-            src={lokiPhoto}
-            alt="Loki"
-            className="w-48 h-48 rounded-full object-cover border-2 border-[#A3FF12] shadow-lg"
-          />
-        )}
+        <div className="video-container" style={{ width: "240px", height: "240px" }}>
+          {isSpeaking ? (
+            <video 
+              ref={videoRef}
+              className="w-full h-full object-cover"
+              src="/videos/lok1.mp4"
+              playsInline
+              muted={false}
+              loop
+              autoPlay
+            />
+          ) : (
+            <img
+              src={lokiPhoto}
+              alt="Loki"
+              className="w-full h-full object-cover"
+            />
+          )}
+        </div>
       </div>
 
       <div className="max-w-2xl mx-auto bg-[#101010] border border-[#A3FF12] shadow-lg rounded-2xl p-6 space-y-4">
