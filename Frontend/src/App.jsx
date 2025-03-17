@@ -6,7 +6,6 @@ const LokiVoiceAssistant = () => {
   const [input, setInput] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [response, setResponse] = useState("");
-  const [history, setHistory] = useState([]);
   const recognitionRef = useRef(null);
 
   useEffect(() => {
@@ -51,7 +50,6 @@ const LokiVoiceAssistant = () => {
     const newResponse = `Loki says: "${userInput}"`;
     setResponse(newResponse);
     speakResponse(newResponse);
-    setHistory((prev) => [...prev, { type: "user", text: userInput }, { type: "loki", text: newResponse }]);
     setInput("");
   };
 
@@ -75,8 +73,6 @@ const LokiVoiceAssistant = () => {
       `}</style>
 
       <h1 className="text-4xl font-bold text-center mb-6">Loki Voice Assistant</h1>
-
-      {/* Removed lokiPhoto image display block */}
 
       <div className="max-w-2xl mx-auto bg-[#101010] border border-[#A3FF12] shadow-lg rounded-2xl p-6 space-y-4">
         <div className="bg-[#1b1b1b] p-4 rounded-xl border border-[#A3FF12] min-h-[150px]">
@@ -103,25 +99,6 @@ const LokiVoiceAssistant = () => {
           >
             <Mic size={18} />
           </button>
-        </div>
-
-        <div className="mt-6 bg-[#181818] border border-[#A3FF12] rounded-xl p-4 max-h-64 overflow-y-auto">
-          <h2 className="text-lg mb-2 font-semibold text-lime-400">Chat History</h2>
-          <ul className="space-y-2 text-sm">
-            {history.map((item, idx) => (
-              <li
-                key={idx}
-                className={
-                  item.type === "user"
-                    ? "text-white"
-                    : "text-lime-300 italic"
-                }
-              >
-                <span className="mr-2 font-bold">{item.type === "user" ? "You:" : "Loki:"}</span>
-                {item.text}
-              </li>
-            ))}
-          </ul>
         </div>
       </div>
 
