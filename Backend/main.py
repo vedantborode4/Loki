@@ -76,7 +76,7 @@ async def text_to_speech(text, output_file="loki_response.mp3"):
         
         # Configure TTS options
         options = SpeakOptions(
-            model='aura-orpheus-en'     # Slightly slower for dramatic effect
+            model='aura-orion-en'     # Slightly slower for dramatic effect
         )
         
         # Generate speech file
@@ -129,7 +129,7 @@ async def chat(request: ChatRequest):
     try:
         # Generate text response from Gemini
         text_response = await generate_loki_response(request.message)
-        print(text_response)
+       
         # Generate audio from text
         audio_base64 = await text_to_speech(text_response)
 
