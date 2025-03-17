@@ -155,7 +155,7 @@ const LokiVoiceAssistant = () => {
               className="w-full h-full object-cover"
               src="/videos/lok1.mp4"
               playsInline
-              muted={false}
+              muted={true}
               loop
               autoPlay
             />
