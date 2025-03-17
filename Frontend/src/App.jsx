@@ -7,8 +7,11 @@ const LokiVoiceAssistant = () => {
   const [isListening, setIsListening] = useState(false);
   const [response, setResponse] = useState("");
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [audioError, setAudioError] = useState(null);
   const recognitionRef = useRef(null);
   const videoRef = useRef(null);
+  const audioRef = useRef(null);
 
   useEffect(() => {
     if (!("webkitSpeechRecognition" in window || "SpeechRecognition" in window)) {
@@ -59,61 +62,127 @@ const LokiVoiceAssistant = () => {
     recognitionRef.current && recognitionRef.current.start();
   };
 
-  const speakResponse = (text) => {
-    const synth = window.speechSynthesis;
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "en-US";
+  const playAudioResponse = (audioBlob) => {
+    setIsSpeaking(true);
+    setAudioError(null);
     
-    // Set up event handlers for the speech synthesis
-    utterance.onstart = () => {
-      setIsSpeaking(true);
-      if (videoRef.current) {
-        // Ensure the video is ready to play
-        videoRef.current.currentTime = 0;
-        
-        const playPromise = videoRef.current.play();
-        
-        if (playPromise !== undefined) {
-          playPromise.then(() => {
-            console.log("Video playback started successfully");
-          }).catch(err => {
+    console.log("Playing audio from backend TTS, blob size:", audioBlob.size);
+    
+    // Create URL for the audio blob
+    const audioUrl = URL.createObjectURL(audioBlob);
+    
+    // Set up the audio element
+    if (!audioRef.current) {
+      audioRef.current = new Audio(audioUrl);
+      
+      audioRef.current.onplay = () => {
+        console.log("Audio playback started");
+        if (videoRef.current) {
+          videoRef.current.currentTime = 0;
+          videoRef.current.play().catch(err => {
             console.error("Video play error:", err);
-            // Try a second time with user interaction
-            document.addEventListener('click', function playVideoOnce() {
-              videoRef.current.play().catch(e => console.error("Second attempt failed:", e));
-              document.removeEventListener('click', playVideoOnce);
-            }, { once: true });
           });
         }
-      }
-    };
+      };
+      
+      audioRef.current.onended = () => {
+        console.log("Audio playback completed successfully");
+        setIsSpeaking(false);
+        if (videoRef.current) {
+          videoRef.current.pause();
+          videoRef.current.currentTime = 0;
+        }
+        // Revoke the object URL to free up memory
+        URL.revokeObjectURL(audioUrl);
+      };
+      
+      audioRef.current.onerror = (event) => {
+        const errorMessage = event.target.error ? event.target.error.message : "Unknown audio error";
+        console.error("Audio error:", errorMessage);
+        setAudioError(`Audio playback error: ${errorMessage}`);
+        setIsSpeaking(false);
+        if (videoRef.current) {
+          videoRef.current.pause();
+          videoRef.current.currentTime = 0;
+        }
+        URL.revokeObjectURL(audioUrl);
+      };
+    } else {
+      audioRef.current.src = audioUrl;
+    }
     
-    utterance.onend = () => {
-      setIsSpeaking(false);
-      if (videoRef.current) {
-        videoRef.current.pause();
-        // Reset to first frame
-        videoRef.current.currentTime = 0;
-      }
-    };
+    // Play the audio
+    const playPromise = audioRef.current.play();
     
-    utterance.onerror = () => {
-      setIsSpeaking(false);
-      if (videoRef.current) {
-        videoRef.current.pause();
-        videoRef.current.currentTime = 0;
-      }
-    };
-    
-    synth.speak(utterance);
+    if (playPromise !== undefined) {
+      playPromise.catch(err => {
+        console.error("Audio playback error:", err);
+        setAudioError(`Failed to play audio: ${err.message}`);
+        setIsSpeaking(false);
+      });
+    }
   };
-
-  const handleSend = (userInput = input) => {
+  
+  const handleSend = async (userInput = input) => {
     if (!userInput.trim()) return;
-    const newResponse = `Loki says: "${userInput}"`;
-    setResponse(newResponse);
-    speakResponse(newResponse);
-    setInput("");
+    
+    try {
+      setIsLoading(true);
+      setAudioError(null);
+      
+      // Send the text to the backend API
+      const response = await fetch('http://localhost:8000/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ message: userInput })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      // Get the response data
+      const data = await response.json();
+      
+      // Display the text response
+      setResponse(data.text || "No text response received");
+      
+      // If the response contains audio data
+      if (data.audio) {
+        console.log("Received audio data from backend, length:", data.audio.length);
+        
+        try {
+          // Convert base64 audio data to a blob
+          const audioData = atob(data.audio);
+          const arrayBuffer = new ArrayBuffer(audioData.length);
+          const uint8Array = new Uint8Array(arrayBuffer);
+          
+          for (let i = 0; i < audioData.length; i++) {
+            uint8Array[i] = audioData.charCodeAt(i);
+          }
+          
+          const audioBlob = new Blob([arrayBuffer], { type: 'audio/mp3' });
+          playAudioResponse(audioBlob);
+        } catch (audioErr) {
+          console.error("Error processing audio data:", audioErr);
+          setAudioError(`Error processing audio: ${audioErr.message}`);
+        }
+      } else {
+        // No audio response - just display text without speech
+        console.warn("No audio data received from backend");
+        setAudioError("No audio data was received from the server");
+      }
+      
+    } catch (error) {
+      console.error("Error communicating with the backend:", error);
+      setResponse("Error: Could not connect to Loki's server. Try again later.");
+      setAudioError(`Connection error: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+      setInput("");
+    }
   };
 
   return (
@@ -143,6 +212,14 @@ const LokiVoiceAssistant = () => {
           box-shadow: 0 0 20px #A3FF12;
           transition: all 0.3s ease;
         }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        .loading-spinner {
+          animation: spin 1.5s linear infinite;
+        }
       `}</style>
 
       <h1 className="text-4xl font-bold text-center mb-6">Loki Voice Assistant</h1>
@@ -171,7 +248,26 @@ const LokiVoiceAssistant = () => {
 
       <div className="max-w-2xl mx-auto bg-[#101010] border border-[#A3FF12] shadow-lg rounded-2xl p-6 space-y-4">
         <div className="bg-[#1b1b1b] p-4 rounded-xl border border-[#A3FF12] min-h-[150px]">
-          {response ? <p>{response}</p> : <p className="text-gray-400">Awaiting command...</p>}
+          {isLoading ? (
+            <div className="flex items-center justify-center h-full">
+              <svg className="w-8 h-8 loading-spinner text-[#A3FF12]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" strokeOpacity="0.2" />
+                <path d="M12 2C6.47715 2 2 6.47715 2 12" stroke="currentColor" strokeWidth="4" />
+              </svg>
+              <span className="ml-2">Loki is thinking...</span>
+            </div>
+          ) : response ? (
+            <div>
+              <p>{response}</p>
+              {audioError && (
+                <p className="text-red-500 text-sm mt-2">
+                  (Audio issue: {audioError})
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="text-gray-400">Awaiting command...</p>
+          )}
         </div>
 
         <div className="flex gap-2">
@@ -181,16 +277,19 @@ const LokiVoiceAssistant = () => {
             placeholder="Speak or type your command..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            disabled={isLoading}
           />
           <button
             onClick={() => handleSend()}
-            className="bg-[#A3FF12] text-black px-4 py-2 rounded-xl hover:bg-lime-400 flex items-center justify-center"
+            className={`bg-[#A3FF12] text-black px-4 py-2 rounded-xl hover:bg-lime-400 flex items-center justify-center ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            disabled={isLoading}
           >
             <Send size={18} />
           </button>
           <button
             onClick={handleVoiceInput}
-            className={`bg-[#A3FF12] text-black px-4 py-2 rounded-xl hover:bg-lime-400 flex items-center justify-center ${isListening ? "animate-pulse" : ""}`}
+            className={`bg-[#A3FF12] text-black px-4 py-2 rounded-xl hover:bg-lime-400 flex items-center justify-center ${isListening ? "animate-pulse" : ""} ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            disabled={isLoading}
           >
             <Mic size={18} />
           </button>
