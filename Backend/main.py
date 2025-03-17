@@ -129,11 +129,11 @@ async def chat(request: ChatRequest):
     try:
         # Generate text response from Gemini
         text_response = await generate_loki_response(request.message)
-        
+        print(text_response)
         # Generate audio from text
         audio_base64 = await text_to_speech(text_response)
 
-        print("Response: ", audio_base64)
+   
         
         if not audio_base64:
             # If TTS failed, return just the text
