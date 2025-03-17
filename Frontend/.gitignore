@@ -6,11 +6,19 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-
+.venv
 node_modules
 dist
 dist-ssr
 *.local
+
+# Python virtual environments
+venv/
+env/
+ENV/
+.venv/
+../Backend/venv/
+../Backend/.venv/
 
 # Editor directories and files
 .vscode/*

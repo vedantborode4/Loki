@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Mic, Send } from "lucide-react";
+import lokiPhoto from "/image/Loki.jpg";
 
 const LokiVoiceAssistant = () => {
   const [input, setInput] = useState("");
@@ -69,11 +70,11 @@ const LokiVoiceAssistant = () => {
       <h1 className="text-4xl font-bold text-center mb-6">Loki Voice Assistant</h1>
 
       <div className="flex justify-center mb-6">
-        <img
-          src="https://upload.wikimedia.org/wikipedia/en/9/9d/Loki_%28Marvel_Comics_character%29.png"
-          alt="Loki Icon"
-          className="w-24 h-24 object-contain animate-pulse drop-shadow-lg"
-        />
+      <img
+  src={lokiPhoto}
+  alt="Loki Icon"
+  className="w-24 h-24 object-contain animate-pulse drop-shadow-lg"
+/>
       </div>
 
       <div className="max-w-2xl mx-auto bg-[#101010] border border-[#A3FF12] shadow-lg rounded-2xl p-6 space-y-4">
