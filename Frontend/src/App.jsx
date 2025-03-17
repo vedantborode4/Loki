@@ -56,7 +56,14 @@ const LokiVoiceAssistant = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0f0f0f] via-[#1e1e1e] to-[#2f2f2f] text-[#A3FF12] font-loki px-4 py-8 animate-background-glow">
+    <div
+      className="min-h-screen bg-cover bg-center bg-no-repeat text-[#A3FF12] font-loki px-4 py-8 animate-background-glow"
+      style={{
+        backgroundImage: `url(${lokiPhoto})`,
+        backgroundBlendMode: "overlay",
+        backgroundColor: "rgba(0, 0, 0, 0.8)",
+      }}
+    >
       <style>{`
         @keyframes glow {
           0%, 100% { box-shadow: 0 0 10px #A3FF12, 0 0 20px #A3FF12; }
@@ -69,13 +76,7 @@ const LokiVoiceAssistant = () => {
 
       <h1 className="text-4xl font-bold text-center mb-6">Loki Voice Assistant</h1>
 
-      <div className="flex justify-center mb-6">
-      <img
-  src={lokiPhoto}
-  alt="Loki Icon"
-  className="w-24 h-24 object-contain animate-pulse drop-shadow-lg"
-/>
-      </div>
+      {/* Removed lokiPhoto image display block */}
 
       <div className="max-w-2xl mx-auto bg-[#101010] border border-[#A3FF12] shadow-lg rounded-2xl p-6 space-y-4">
         <div className="bg-[#1b1b1b] p-4 rounded-xl border border-[#A3FF12] min-h-[150px]">
