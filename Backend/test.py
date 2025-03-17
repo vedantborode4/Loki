@@ -1,23 +1,21 @@
-
 import os
-from typing import IO
-from io import BytesIO
+import uuid
 from elevenlabs import VoiceSettings
 from elevenlabs.client import ElevenLabs
 
-ELEVENLABS_API_KEY ="sk_20c92ab6a88bb00a0fb4df9a5c23a10c74defdd1ae238776"
+ELEVENLABS_API_KEY = "sk_9981cd441172503d2f214123856146a771dda71fb068eeb3"
 client = ElevenLabs(
     api_key=ELEVENLABS_API_KEY,
 )
 
 
-def text_to_speech_stream(text: str) -> IO[bytes]:
-    # Perform the text-to-speech conversion
+def text_to_speech_file(text: str) -> str:
+    # Calling the text_to_speech conversion API with detailed parameters
     response = client.text_to_speech.convert(
-        voice_id="EJHTrkzEnXcKGK7b449B", # Adam pre-made voice
+        voice_id="GGVcJ45ZKsp60mvdZ38b", # Adam pre-made voice
         output_format="mp3_22050_32",
         text=text,
-        model_id="eleven_multilingual_v2",
+        model_id="eleven_turbo_v2_5", # use the turbo model for low latency
         # Optional voice settings that allow you to customize the output
         voice_settings=VoiceSettings(
             stability=0.0,
@@ -28,19 +26,22 @@ def text_to_speech_stream(text: str) -> IO[bytes]:
         ),
     )
 
-    # Create a BytesIO object to hold the audio data in memory
-    audio_stream = BytesIO()
+    # uncomment the line below to play the audio back
+    # play(response)
 
-    # Write each chunk of audio data to the stream
-    for chunk in response:
-        if chunk:
-            audio_stream.write(chunk)
+    # Generating a unique file name for the output MP3 file
+    save_file_path = f"{uuid.uuid4()}.mp3"
 
-    # Reset stream position to the beginning
-    audio_stream.seek(0)
+    # Writing the audio to a file
+    with open(save_file_path, "wb") as f:
+        for chunk in response:
+            if chunk:
+                f.write(chunk)
 
-    # Return the stream for further use
-    return audio_stream
+    print(f"{save_file_path}: A new audio file was saved successfully!")
+
+    # Return the path of the saved audio file
+    return save_file_path
 
 
-text_to_speech_stream("Hi fucker yo soy Loki")
+text_to_speech_file("Hello, World!")
